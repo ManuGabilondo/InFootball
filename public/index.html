@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fútbol · Football-Data.org</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap">
+<style>
+:root{--bg:#f3f5ef;--card:#fff;--ink:#16211a;--mute:#66736a;--line:#dfe4da;--ucl:#1f6feb;--uel:#e08a00;--rel:#c8382f;--accent:#1d5e3a;--win:#2e9b5b;--draw:#a7b0a8;--loss:#c8382f}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1712;--card:#16211a;--ink:#e8efe9;--mute:#8fa094;--line:#243329;--accent:#5fd393}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Barlow,system-ui,sans-serif}
+body:has(dialog[open]){overflow:hidden}
+main{max-width:1080px;margin:0 auto;padding:24px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;margin-bottom:14px}
+h1{font:700 34px/1 "Barlow Condensed",Impact,sans-serif;margin:0}
+h2{font:700 20px/1.1 "Barlow Condensed",Impact,sans-serif;margin:0 0 10px}
+h3{font:700 16px/1 "Barlow Condensed",sans-serif;margin:18px 0 8px}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--uel)}
+.dot.ok{background:var(--win)}.dot.err{background:var(--rel)}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tabs button{flex:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:8px 12px;font:700 17px "Barlow Condensed",sans-serif;color:var(--mute);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.head h2{margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:none;border:0;padding:4px 10px;font-size:13px;color:var(--mute);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--card)}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+#main{min-width:560px}
+th{font-weight:500;color:var(--mute);font-size:12px;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;text-align:right;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+#main th:nth-child(2),#main td:nth-child(2){text-align:left}
+td.pos{width:34px;text-align:left;border-left:4px solid transparent;font:700 16px "Barlow Condensed",sans-serif}
+tr.ucl td.pos{border-left-color:var(--ucl)}tr.uel td.pos{border-left-color:var(--uel)}tr.rel td.pos{border-left-color:var(--rel)}
+td.pts{font:700 17px "Barlow Condensed",sans-serif}
+td.err{text-align:left;color:var(--rel);padding:16px 6px}
+.tb{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:0;font:500 15px Barlow,sans-serif;color:var(--ink);cursor:pointer;text-align:left}
+.tb:hover span,.tl:hover{text-decoration:underline}
+.tl{background:none;border:0;padding:0;font:inherit;color:var(--mute);cursor:pointer}
+img.cr{width:20px;height:20px;object-fit:contain}
+.form{display:inline-flex;gap:3px}
+.form i{width:9px;height:9px;border-radius:2px;background:var(--draw)}
+.form i.W{background:var(--win)}.form i.L{background:var(--loss)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:12px;font-size:12px;color:var(--mute)}
+.legend span::before{content:"";display:inline-block;width:4px;height:12px;margin-right:6px;vertical-align:-2px;background:var(--c)}
+ol,ul{list-style:none;margin:0;padding:0}
+li.sc{padding:8px 0;border-bottom:1px solid var(--line)}li.sc:last-child{border-bottom:0}
+.row{display:flex;justify-content:space-between;gap:8px;font-weight:500}
+.row b{font:700 18px "Barlow Condensed",sans-serif}
+.sub{font-size:12px;color:var(--mute)}
+.bar{height:4px;border-radius:2px;background:var(--line);margin-top:5px}
+.bar div{height:100%;border-radius:2px;background:var(--accent)}
+footer{margin-top:16px;font-size:12px;color:var(--mute)}
+/* ficha de equipo */
+dialog{border:0;padding:0;margin:0 0 0 auto;height:100%;max-height:100%;max-width:100%;width:min(480px,100%);background:var(--card);color:var(--ink);box-shadow:-8px 0 30px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(10,20,14,.5)}
+dialog[open]{animation:in .2s ease-out}
+@keyframes in{from{transform:translateX(24px);opacity:0}}
+@media (prefers-reduced-motion:reduce){dialog[open]{animation:none}}
+.sheet{height:100%;overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.shead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.tname{display:flex;gap:12px;align-items:center}
+.tname img{width:44px;height:44px;object-fit:contain}
+.tname h2{margin:0;font-size:26px}
+.x{background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);width:34px;height:34px;cursor:pointer;flex:none}
+.wdl{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:10px 0 4px}
+.wdl i{display:block}
+.st th:first-child,.st td:first-child{text-align:left}
+.st td:first-child{color:var(--mute)}
+li.m{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+li.m:last-child{border-bottom:0}
+li.m .d{color:var(--mute);width:48px;flex:none;font-size:12px}
+.chip{font:700 12px "Barlow Condensed",sans-serif;font-style:normal;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;color:#fff;flex:none}
+.chip.W{background:var(--win)}.chip.D{background:var(--draw)}.chip.L{background:var(--loss)}
+.info{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:14px;margin:12px 0}
+.info dt{color:var(--mute)}.info dd{margin:0}
+.grp p{margin:2px 0 8px;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">Fútbol</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Cargando…</span></div>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Competiciones"></nav>
+  <div class="grid">
+    <section>
+      <div class="head">
+        <h2>Clasificación</h2>
+        <div class="seg" id="seg">
+          <button data-view="TOTAL">Total</button><button data-view="HOME">Local</button><button data-view="AWAY">Visitante</button>
+        </div>
+      </div>
+      <div class="scroll"><table id="main">
+        <thead><tr><th></th><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>Forma</th><th>Pts</th></tr></thead>
+        <tbody id="table"></tbody>
+      </table></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section>
+      <h2>Goleadores</h2>
+      <ol id="scorers"></ol>
+    </section>
+  </div>
+  <footer>Pulsa un equipo para ver su ficha. Las zonas de color son orientativas. Datos: Football-Data.org</footer>
+</main>
+<dialog id="sheet" aria-labelledby="tName"><div class="sheet" id="sheetBody"></div></dialog>
+
+<script>
+const LEAGUES = {
+  PD:  { name: "LaLiga",           zones: [[4,"ucl","Champions"],[6,"uel","Europa"]], rel: 3 },
+  PL:  { name: "Premier League",   zones: [[4,"ucl","Champions"],[6,"uel","Europa"]], rel: 3 },
+  SA:  { name: "Serie A",          zones: [[4,"ucl","Champions"],[6,"uel","Europa"]], rel: 3 },
+  BL1: { name: "Bundesliga",       zones: [[4,"ucl","Champions"],[6,"uel","Europa"]], rel: 2 },
+  FL1: { name: "Ligue 1",          zones: [[3,"ucl","Champions"],[5,"uel","Europa"]], rel: 2 },
+  DED: { name: "Eredivisie",       zones: [], rel: 0 },
+  PPL: { name: "Primeira Liga",    zones: [], rel: 0 },
+  ELC: { name: "Championship",     zones: [[2,"ucl","Ascenso"],[6,"uel","Play-off"]], rel: 3 },
+  CL:  { name: "Champions League", zones: [[8,"ucl","Octavos directos"],[24,"uel","Play-off"]], rel: 0 }
+};
+const VIEWS = { TOTAL: "Total", HOME: "Local", AWAY: "Visitante" };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sign = n => n > 0 ? "+" + n : String(n);
+const per = (n, r) => r && r.playedGames ? (n / r.playedGames).toFixed(2) : "–";
+const crest = t => t?.crest ? `<img class="cr" src="${esc(t.crest)}" alt="" loading="lazy" onerror="this.remove()">` : "";
+const fmtDate = iso => new Date(iso).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+
+let saved = "PD";
+try { saved = localStorage.getItem("league") || "PD"; } catch (e) {}
+const state = { code: LEAGUES[saved] ? saved : "PD", view: "TOTAL", st: null, sc: [], openId: null };
+
+async function getJSON(path) {
+  const r = await fetch(path);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "Error " + r.status);
+  return j;
+}
+function friendly(m) {
+  return /403/.test(m) ? "Esta competición no está incluida en tu plan de Football-Data.org." : m;
+}
+function setStatus(text, cls) {
+  $("statusText").textContent = text;
+  $("dot").className = "dot " + (cls || "");
+}
+
+function renderTabs() {
+  $("tabs").innerHTML = Object.entries(LEAGUES).map(([c, l]) =>
+    `<button role="tab" data-code="${c}" aria-selected="${c === state.code}">${l.name}</button>`).join("");
+}
+
+async function loadLeague(code) {
+  state.code = code; state.view = "TOTAL"; state.st = null; state.sc = [];
+  try { localStorage.setItem("league", code); } catch (e) {}
+  renderTabs();
+  $("title").textContent = LEAGUES[code].name;
+  $("scorers").innerHTML = ""; $("legend").innerHTML = "";
+  $("table").innerHTML = `<tr><td colspan="11" class="sub">Cargando…</td></tr>`;
+  setStatus("Cargando…");
+  try {
+    const [st, sc] = await Promise.all([
+      getJSON(`/api/standings/${code}`),
+      getJSON(`/api/scorers/${code}`).catch(() => ({ scorers: [] }))
+    ]);
+    if (state.code !== code) return;
+    state.st = st; state.sc = sc.scorers || [];
+    renderTable(); renderScorers();
+    const s = st.season || {};
+    const yr = s.startDate ? ` · Temporada ${s.startDate.slice(0, 4)}/${(s.endDate || "").slice(2, 4)}` : "";
+    setStatus(`En vivo${yr}${s.currentMatchday ? " · Jornada " + s.currentMatchday : ""}`, "ok");
+  } catch (e) {
+    if (state.code !== code) return;
+    $("table").innerHTML = `<tr><td colspan="11" class="err">${esc(friendly(e.message))}</td></tr>`;
+    setStatus("Sin datos", "err");
+  }
+}
+
+const tableOf = type => (state.st?.standings || []).find(s => s.type === type)?.table;
+const rowOf = (type, id) => tableOf(type)?.find(r => r.team.id === id);
+
+function renderTable() {
+  document.querySelectorAll("#seg button").forEach(b => {
+    b.setAttribute("aria-pressed", b.dataset.view === state.view);
+    b.hidden = !tableOf(b.dataset.view);
+  });
+  const rows = tableOf(state.view) || [];
+  const cfg = LEAGUES[state.code];
+  const zoneOf = r => {
+    if (state.view !== "TOTAL") return "";
+    if (cfg.rel && r.position > rows.length - cfg.rel) return "rel";
+    const z = cfg.zones.find(z => r.position <= z[0]);
+    return z ? z[1] : "";
+  };
+  $("table").innerHTML = rows.map(r => {
+    const form = (r.form || "").split(",").filter(Boolean).map(f => `<i class="${f}" title="${f}"></i>`).join("");
+    return `<tr class="${zoneOf(r)}"><td class="pos">${r.position}</td>
+      <td><button class="tb" data-team="${r.team.id}">${crest(r.team)}<span>${esc(r.team.shortName || r.team.name)}</span></button></td>
+      <td>${r.playedGames}</td><td>${r.won}</td><td>${r.draw}</td><td>${r.lost}</td><td>${r.goalsFor}</td><td>${r.goalsAgainst}</td>
+      <td>${sign(r.goalDifference)}</td><td><span class="form">${form}</span></td><td class="pts">${r.points}</td></tr>`;
+  }).join("") || `<tr><td colspan="11" class="sub">Sin datos de clasificación.</td></tr>`;
+  const items = state.view === "TOTAL" ? cfg.zones.map(z => [z[1], z[2]]) : [];
+  if (state.view === "TOTAL" && cfg.rel) items.push(["rel", "Descenso"]);
+  $("legend").innerHTML = items.map(([c, l]) => `<span style="--c:var(--${c})">${l}</span>`).join("");
+}
+
+function renderScorers() {
+  const list = state.sc.slice(0, 10);
+  if (!list.length) { $("scorers").innerHTML = `<li class="sub">Sin datos de goleadores.</li>`; return; }
+  const max = Math.max(...list.map(s => s.goals));
+  $("scorers").innerHTML = list.map(s => `<li class="sc">
+    <div class="row"><span>${esc(s.player.name)}</span><b>${s.goals}</b></div>
+    <div class="sub"><button class="tl" data-team="${s.team.id}">${esc(s.team.shortName || s.team.name)}</button> · ${s.assists ?? 0} asist. · ${s.penalties ?? 0} pen.</div>
+    <div class="bar"><div style="width:${s.goals / max * 100}%"></div></div></li>`).join("");
+}
+
+/* ---------- Ficha de equipo ---------- */
+const METRICS = [
+  ["Partidos", r => r.playedGames], ["Ganados", r => r.won], ["Empatados", r => r.draw], ["Perdidos", r => r.lost],
+  ["Goles a favor", r => r.goalsFor], ["Goles en contra", r => r.goalsAgainst], ["Diferencia", r => sign(r.goalDifference)],
+  ["Puntos", r => r.points], ["Puntos por partido", r => per(r.points, r)],
+  ["Goles a favor por partido", r => per(r.goalsFor, r)], ["Goles en contra por partido", r => per(r.goalsAgainst, r)]
+];
+
+function statsHTML(id) {
+  const t = rowOf("TOTAL", id);
+  const cols = Object.keys(VIEWS).map(v => rowOf(v, id));
+  const p = t.playedGames || 1;
+  const form = (t.form || "").split(",").filter(Boolean).map(f => `<i class="${f}" title="${f}"></i>`).join("");
+  const scorers = state.sc.filter(s => s.team.id === id).slice(0, 3);
+  return `<div class="wdl" title="Ganados / empatados / perdidos">
+      <i style="width:${t.won / p * 100}%;background:var(--win)"></i><i style="width:${t.draw / p * 100}%;background:var(--draw)"></i><i style="width:${t.lost / p * 100}%;background:var(--loss)"></i></div>
+    <div class="sub">${Math.round(t.won / p * 100)}% de victorias · Forma <span class="form">${form || "–"}</span></div>
+    <h3>Estadísticas</h3>
+    <div class="scroll"><table class="st"><thead><tr><th></th>${Object.values(VIEWS).map(v => `<th>${v}</th>`).join("")}</tr></thead><tbody>
+      ${METRICS.map(([l, f]) => `<tr><td>${l}</td>${cols.map(r => `<td>${r ? f(r) : "–"}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div>
+    ${scorers.length ? `<h3>Goleadores del equipo</h3><ul>${scorers.map(s => `<li class="m"><span class="t">${esc(s.player.name)}</span><b style="margin-left:auto">${s.goals}</b></li>`).join("")}</ul>` : ""}`;
+}
+
+const POS = [["Porteros", /goalkeeper/i], ["Centrocampistas", /midfield/i], ["Defensas", /back|defen/i], ["Delanteros", /wing|forward|offence|striker/i]];
+const posOf = p => (POS.find(([, re]) => re.test(p || "")) || ["Otros"])[0];
+
+function matchHTML(m, id, past) {
+  let chip = "";
+  if (past && m.hg != null) {
+    const home = m.homeId === id, own = home ? m.hg : m.ag, opp = home ? m.ag : m.hg;
+    const r = own > opp ? "W" : own < opp ? "L" : "D";
+    chip = `<i class="chip ${r}">${{ W: "G", D: "E", L: "P" }[r]}</i>`;
+  }
+  const mid = past ? `<b>${m.hg ?? "–"}–${m.ag ?? "–"}</b>` : "vs";
+  return `<li class="m">${chip}<span class="d">${fmtDate(m.date)}</span><span>${esc(m.home)} ${mid} ${esc(m.away)}<br><span class="sub">${esc(m.comp)}</span></span></li>`;
+}
+
+function detailHTML(d, id) {
+  const t = d.team;
+  const ages = t.squad.filter(p => p.dateOfBirth).map(p => (Date.now() - new Date(p.dateOfBirth)) / 31557600000);
+  const avg = ages.length ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : null;
+  const by = {};
+  t.squad.forEach(p => (by[posOf(p.position)] ??= []).push(p));
+  const site = /^https?:\/\//.test(t.website || "") ? `<a href="${esc(t.website)}" target="_blank" rel="noopener noreferrer">${esc(t.website.replace(/^https?:\/\//, ""))}</a>` : null;
+  const info = [["Estadio", t.venue], ["Fundado", t.founded], ["Entrenador", t.coach?.name], ["Colores", t.colors], ["Web", site]]
+    .filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${k === "Web" ? v : esc(v)}</dd>`).join("");
+  return `<dl class="info">${info}</dl>
+    ${d.last.length ? `<h3>Últimos partidos</h3><ul>${d.last.map(m => matchHTML(m, id, true)).join("")}</ul>` : ""}
+    ${d.next.length ? `<h3>Próximos partidos</h3><ul>${d.next.map(m => matchHTML(m, id, false)).join("")}</ul>` : ""}
+    ${t.squad.length ? `<h3>Plantilla · ${t.squad.length} jugadores${avg ? " · edad media " + avg : ""}</h3>` +
+      ["Porteros", "Defensas", "Centrocampistas", "Delanteros", "Otros"].filter(n => by[n]).map(n =>
+        `<div class="grp"><b>${n}</b> <span class="sub">${by[n].length}</span><p>${by[n].map(p => esc(p.name)).join(", ")}</p></div>`).join("") : ""}`;
+}
+
+async function openTeam(id) {
+  id = Number(id);
+  const t = rowOf("TOTAL", id);
+  if (!t) return;
+  state.openId = id;
+  $("sheetBody").innerHTML = `<div class="shead"><div class="tname">${crest(t.team).replace('class="cr"', "")}
+      <div><h2 id="tName">${esc(t.team.name)}</h2><div class="sub">${t.position}º en ${LEAGUES[state.code].name}</div></div></div>
+      <button class="x" data-close aria-label="Cerrar ficha">✕</button></div>
+    ${statsHTML(id)}<div id="detail" class="sub" style="margin-top:16px">Cargando ficha del equipo…</div>`;
+  if (!$("sheet").open) $("sheet").showModal();
+  $("sheetBody").scrollTop = 0;
+  try {
+    const d = await getJSON(`/api/team/${id}`);
+    if (state.openId === id) $("detail").outerHTML = detailHTML(d, id);
+  } catch (e) {
+    if (state.openId === id) $("detail").textContent = "No se pudo cargar la ficha: " + friendly(e.message);
+  }
+}
+
+document.addEventListener("click", e => {
+  const t = e.target;
+  const tab = t.closest("[data-code]"), view = t.closest("[data-view]"), team = t.closest("[data-team]");
+  if (tab) loadLeague(tab.dataset.code);
+  else if (view) { state.view = view.dataset.view; renderTable(); }
+  else if (team) openTeam(team.dataset.team);
+  else if (t.closest("[data-close]") || t === $("sheet")) $("sheet").close();
+});
+
+renderTabs();
+loadLeague(state.code);
+</script>
+</body>
+</html>
