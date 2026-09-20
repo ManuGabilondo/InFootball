@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Modelo y predicciones · Fútbol</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap">
+<style>
+:root{--bg:#f3f5ef;--card:#fff;--ink:#16211a;--mute:#66736a;--line:#dfe4da;--ucl:#1f6feb;--uel:#e08a00;--accent:#1d5e3a;--win:#2e9b5b;--draw:#a7b0a8;--loss:#c8382f}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1712;--card:#16211a;--ink:#e8efe9;--mute:#8fa094;--line:#243329;--accent:#5fd393}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Barlow,system-ui,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px))}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;margin-bottom:14px}
+h1{font:700 34px/1 "Barlow Condensed",Impact,sans-serif;margin:0}
+h2{font:700 20px/1.1 "Barlow Condensed",Impact,sans-serif;margin:0 0 10px}
+h3{font:700 15px/1.1 "Barlow Condensed",sans-serif;margin:16px 0 8px}
+a{color:var(--accent);font-weight:500}
+button{font-family:inherit}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tabs button{flex:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:8px 12px;font:700 17px "Barlow Condensed",sans-serif;color:var(--mute);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:16px;align-items:start;margin-bottom:16px}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.grid section{margin:0}
+.sub{font-size:12px;color:var(--mute)}
+.note{font-size:13px;margin-bottom:16px;padding:8px 12px;border-left:4px solid var(--uel);background:var(--card)}
+.note.ok{border-left-color:var(--win)}.note.err{border-left-color:var(--loss)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-weight:500;color:var(--mute);font-size:12px;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th:nth-child(2),td:nth-child(2){text-align:left}
+td.pos{width:30px;text-align:left;font:700 15px "Barlow Condensed",sans-serif}
+td.pts{font:700 17px "Barlow Condensed",sans-serif}
+.up{color:var(--win)}.dn{color:var(--loss)}
+.tb{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:0;font:500 15px Barlow,sans-serif;color:var(--ink);cursor:pointer}
+.sw{width:10px;height:10px;border-radius:50%;flex:none}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--mute);font:11px Barlow,sans-serif}
+.ax{stroke:var(--line);fill:none}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cards div{border:1px solid var(--line);border-radius:8px;padding:10px}
+.cards b{display:block;font:700 26px/1 "Barlow Condensed",sans-serif}
+.cards span{display:block;font-size:13px}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.two{grid-template-columns:1fr}.cards b{font-size:22px}}
+li{list-style:none}ul{margin:0;padding:0}
+.mt{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,1.1fr);gap:4px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.mt:last-child{border-bottom:0}
+.mt .when{grid-column:1/-1;font-size:12px;color:var(--mute)}
+.pb{display:flex;height:22px;border-radius:5px;overflow:hidden;font-size:12px;color:#fff;font-weight:500}
+.pb i{display:flex;align-items:center;justify-content:center;font-style:normal;min-width:0;overflow:hidden}
+.pb .H{background:var(--ucl)}.pb .D{background:var(--draw)}.pb .A{background:var(--uel)}
+.ok-t{color:var(--win);font-weight:500}.ko-t{color:var(--loss);font-weight:500}
+footer{font-size:12px;color:var(--mute);line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Modelo y predicciones</h1>
+    <a href="index.html">← Clasificaciones</a>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Competiciones"></nav>
+  <div id="warm" class="note">Cargando…</div>
+
+  <div class="grid">
+    <section>
+      <h2>Ratings ELO</h2>
+      <table><thead><tr><th></th><th>Equipo</th><th>ELO</th><th title="Cambio desde el inicio de temporada">Δ temp.</th></tr></thead><tbody id="ranks"></tbody></table>
+      <p class="sub">Pulsa un equipo para añadirlo o quitarlo de la gráfica (máx. 6).</p>
+    </section>
+    <section>
+      <h2>Evolución del rating esta temporada</h2>
+      <div id="evo"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Próximos partidos: probabilidades del modelo</h2>
+    <ul id="upcoming"></ul>
+    <p class="sub">1 = gana el local, X = empate, 2 = gana el visitante. Cada predicción se guarda antes del partido y no se puede cambiar después.</p>
+  </section>
+
+  <section>
+    <h2>¿Cuánto acierta el modelo?</h2>
+    <div class="two">
+      <div id="evalBox"></div>
+      <div><h3>Calibración</h3><div id="calib"></div>
+        <p class="sub">Si el modelo está bien calibrado, los puntos siguen la diagonal: lo que dice que pasa el 30 % de las veces pasa realmente el 30 %.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Seguimiento en vivo</h2>
+    <div id="track"></div>
+  </section>
+
+  <footer id="method"></footer>
+</main>
+
+<script>
+const LEAGUES = { PD: "LaLiga", PL: "Premier League", SA: "Serie A", BL1: "Bundesliga", FL1: "Ligue 1", DED: "Eredivisie", PPL: "Primeira Liga", ELC: "Championship" };
+const COLORS = ["#1f6feb", "#e08a00", "#2e9b5b", "#c8382f", "#8a4fff", "#0aa5a5"];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pct = x => (x * 100).toFixed(0) + "%";
+const pct1 = x => (x * 100).toFixed(1) + "%";
+const f3 = x => x.toFixed(3);
+const when = iso => new Date(iso).toLocaleString("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+let saved = "PD";
+try { saved = localStorage.getItem("modelLeague") || "PD"; } catch (e) {}
+let code = LEAGUES[saved] ? saved : "PD", d = null, hl = [];
+
+function renderTabs() {
+  $("tabs").innerHTML = Object.entries(LEAGUES).map(([c, n]) =>
+    `<button role="tab" data-code="${c}" aria-selected="${c === code}">${n}</button>`).join("");
+}
+
+async function load(c) {
+  code = c; d = null;
+  try { localStorage.setItem("modelLeague", c); } catch (e) {}
+  renderTabs();
+  $("warm").className = "note"; $("warm").textContent = "Calculando el modelo… (la primera vez puede tardar unos segundos)";
+  ["ranks", "evo", "upcoming", "evalBox", "calib", "track", "method"].forEach(i => $(i).innerHTML = "");
+  try {
+    const r = await fetch(`/api/model/${c}`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "Error " + r.status);
+    if (code !== c) return;
+    d = j; hl = d.teams.slice(0, 3).map(t => t.id);
+    renderAll();
+  } catch (e) {
+    if (code !== c) return;
+    $("warm").className = "note err";
+    $("warm").textContent = /403/.test(e.message) ? "Esta competición no está incluida en tu plan de Football-Data.org." : e.message;
+  }
+}
+
+function renderAll() {
+  const w = $("warm");
+  w.className = "note" + (d.warm ? " ok" : "");
+  w.textContent = d.warm
+    ? "Los ratings se han calentado con la temporada anterior, así que ya son fiables desde el inicio."
+    : "Sin temporada anterior: los ratings parten de 1500 y necesitan varias jornadas para ser fiables. " + (d.warmNote || "");
+  renderRanks(); renderEvo(); renderUpcoming(); renderEval(); renderTrack();
+  const p = d.params;
+  $("method").innerHTML = `<b>Método.</b> Cada equipo tiene un rating ELO. Antes de cada partido se calcula la diferencia de rating (más una ventaja de local de ${p.HFA} puntos) y se convierte en probabilidades de 1X2 con el modelo de Davidson (parámetro de empate ν = ${p.NU}). Después del partido, los ratings se actualizan con K = ${p.K}, dando más peso a las goleadas. Entre temporadas, los ratings se acercan un ${p.REGRESS * 100} % a ${p.START}, y los equipos nuevos empiezan en ${p.PROMOTED}. La evaluación es <i>walk-forward</i>: cada partido se predice solo con información anterior a él. Es un modelo simple con fines académicos, no un consejo de apuestas.`;
+}
+
+function renderRanks() {
+  $("ranks").innerHTML = d.teams.map((t, i) => {
+    const k = hl.indexOf(t.id);
+    return `<tr><td class="pos">${i + 1}</td>
+      <td><button class="tb" data-hl="${t.id}"><i class="sw" style="background:${k >= 0 ? COLORS[k] : "var(--line)"}"></i>${esc(t.name)}</button></td>
+      <td class="pts">${t.rating}</td><td class="${t.delta >= 0 ? "up" : "dn"}">${t.delta > 0 ? "+" : ""}${t.delta}</td></tr>`;
+  }).join("");
+}
+
+function renderEvo() {
+  const ids = Object.keys(d.history), all = ids.flatMap(i => d.history[i]);
+  const W = 640, H = 300, m = { l: 44, r: 10, t: 10, b: 28 };
+  const lo = Math.floor(Math.min(...all) / 20) * 20, hi = Math.ceil(Math.max(...all) / 20) * 20;
+  const n = Math.max(1, ...ids.map(i => d.history[i].length - 1));
+  const x = i => m.l + i / n * (W - m.l - m.r), y = v => m.t + (1 - (v - lo) / (hi - lo || 1)) * (H - m.t - m.b);
+  const path = a => a.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1)).join("");
+  const grid = [0, 1, 2, 3, 4].map(k => lo + (hi - lo) * k / 4).map(v =>
+    `<line class="ax" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`).join("");
+  const grey = ids.filter(i => !hl.includes(Number(i))).map(i => `<path d="${path(d.history[i])}" fill="none" stroke="var(--line)" stroke-width="1.2"/>`).join("");
+  const top = hl.map((id, k) => d.history[id] ? `<path d="${path(d.history[id])}" fill="none" stroke="${COLORS[k]}" stroke-width="2.4"/>` : "").join("");
+  $("evo").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del rating ELO por partidos jugados">${grid}${grey}${top}
+    <text x="${(W + m.l) / 2}" y="${H - 6}" text-anchor="middle">Partidos jugados esta temporada</text></svg>`;
+}
+
+function renderUpcoming() {
+  $("upcoming").innerHTML = d.upcoming.map(u => {
+    const s = u.pr, seg = (k, lbl) => `<i class="${k}" style="width:${s[k] * 100}%" title="${lbl} ${pct1(s[k])}">${s[k] > 0.12 ? pct(s[k]) : ""}</i>`;
+    return `<li class="mt"><span>${esc(u.home)} <span class="sub">vs</span> ${esc(u.away)}</span>
+      <div class="pb" role="img" aria-label="Local ${pct(s.H)}, empate ${pct(s.D)}, visitante ${pct(s.A)}">${seg("H", "1")}${seg("D", "X")}${seg("A", "2")}</div>
+      <span class="when">${when(u.date)}</span></li>`;
+  }).join("") || `<li class="sub">No hay partidos próximos programados.</li>`;
+}
+
+function cards(m) {
+  if (!m) return `<p class="sub">Todavía no hay partidos suficientes.</p>`;
+  return `<div class="cards">
+    <div><b>${pct1(m.accuracy)}</b><span>acierto 1X2</span><span class="sub">Siempre local: ${pct1(m.baseline.accuracy)}</span></div>
+    <div><b>${f3(m.brier)}</b><span>Brier (menor es mejor)</span><span class="sub">Base: ${f3(m.baseline.brier)}</span></div>
+    <div><b class="${m.skill >= 0 ? "up" : "dn"}">${m.skill > 0 ? "+" : ""}${(m.skill * 100).toFixed(1)}%</b><span>mejora sobre la base</span><span class="sub">${m.n} partidos</span></div></div>`;
+}
+
+function renderEval() {
+  $("evalBox").innerHTML = `<h3>Solo esta temporada</h3>${cards(d.metrics.current)}
+    <h3>Toda la muestra${d.warm ? " (incluye la temporada anterior)" : ""}</h3>${cards(d.metrics.all)}
+    <p class="sub">La base usa frecuencias fijas (45 % local, 26 % empate, 29 % visitante). El Brier mide el error de las probabilidades, no solo si se acierta el signo.</p>`;
+  const m = d.metrics.all || d.metrics.current;
+  if (!m) return;
+  const S = 260, p = 34, x = v => p + v * (S - p - 10), y = v => S - p - v * (S - p - 10);
+  const pts = m.calibration;
+  $("calib").innerHTML = `<svg viewBox="0 0 ${S} ${S}" role="img" aria-label="Gráfica de calibración">
+    <line class="ax" x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(0)}"/><line class="ax" x1="${x(0)}" y1="${y(0)}" x2="${x(0)}" y2="${y(1)}"/>
+    <line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="var(--mute)" stroke-dasharray="4 4"/>
+    <path d="${pts.map((q, i) => (i ? "L" : "M") + x(q.meanP).toFixed(1) + "," + y(q.freq).toFixed(1)).join("")}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+    ${pts.map(q => `<circle cx="${x(q.meanP)}" cy="${y(q.freq)}" r="${(3 + Math.min(6, Math.sqrt(q.n) / 3)).toFixed(1)}" fill="var(--accent)"><title>Predicho ${pct(q.meanP)} · real ${pct(q.freq)} (${q.n} casos)</title></circle>`).join("")}
+    ${[0, 0.5, 1].map(v => `<text x="${x(v)}" y="${S - p + 14}" text-anchor="middle">${pct(v)}</text><text x="${p - 6}" y="${y(v) + 4}" text-anchor="end">${pct(v)}</text>`).join("")}
+    <text x="${(S + p) / 2}" y="${S - 4}" text-anchor="middle">Probabilidad predicha</text></svg>`;
+}
+
+function renderTrack() {
+  const t = d.tracking, m = t.league;
+  const pick = pr => ["H", "D", "A"].reduce((a, k) => pr[k] > pr[a] ? k : a, "H");
+  const lab = { H: "1", D: "X", A: "2" };
+  $("track").innerHTML = `<p>Predicciones congeladas antes del partido y comprobadas con el resultado real. <b>${t.pending}</b> pendientes en esta liga.</p>` +
+    (m ? cards(m) + (t.all && t.all.n !== m.n ? `<p class="sub">Todas las ligas: ${t.all.n} partidos resueltos, ${pct1(t.all.accuracy)} de acierto.</p>` : "") +
+      `<h3>Últimas comprobaciones</h3><ul>${t.recent.map(s => {
+        const pk = pick(s.pr), ok = pk === s.result.outcome;
+        return `<li class="mt"><span>${esc(s.home)} <b>${s.result.hg}–${s.result.ag}</b> ${esc(s.away)}</span>
+          <span>Predicho <b>${lab[pk]}</b> (${pct(s.pr[pk])}) · real <b>${lab[s.result.outcome]}</b> <span class="${ok ? "ok-t" : "ko-t"}">${ok ? "acierto" : "fallo"}</span></span></li>`;
+      }).join("")}</ul>`
+      : `<p class="sub">Aún no hay partidos resueltos. Las predicciones de arriba se guardan ahora y se comprobarán cuando se jueguen. Vuelve a abrir esta página después de la jornada.</p>`);
+}
+
+document.addEventListener("click", e => {
+  const tab = e.target.closest("[data-code]"), h = e.target.closest("[data-hl]");
+  if (tab) load(tab.dataset.code);
+  else if (h && d) {
+    const id = Number(h.dataset.hl), k = hl.indexOf(id);
+    if (k >= 0) hl.splice(k, 1); else { hl.push(id); if (hl.length > 6) hl.shift(); }
+    renderRanks(); renderEvo();
+  }
+});
+renderTabs(); load(code);
+</script>
+</body>
+</html>

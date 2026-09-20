@@ -18,6 +18,7 @@ h2{font:700 20px/1.1 "Barlow Condensed",Impact,sans-serif;margin:0 0 10px}
 h3{font:700 16px/1 "Barlow Condensed",sans-serif;margin:18px 0 8px}
 button{font-family:inherit}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lnk{color:var(--accent);font-weight:500}
 .status{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:8px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--uel)}
 .dot.ok{background:var(--win)}.dot.err{background:var(--rel)}
@@ -90,6 +91,7 @@ li.m .d{color:var(--mute);width:48px;flex:none;font-size:12px}
 <main>
   <header>
     <h1 id="title">Fútbol</h1>
+    <a class="lnk" href="modelo.html">Modelo y predicciones</a>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">Cargando…</span></div>
   </header>
   <nav class="tabs" id="tabs" aria-label="Competiciones"></nav>

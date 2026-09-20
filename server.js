@@ -1,5 +1,7 @@
 import express from "express";
 import "dotenv/config";
+import fs from "fs";
+import { build, metrics, probs, PARAMS } from "./elo.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -106,6 +108,101 @@ app.get("/api/team/:id", async (req, res) => {
     last: all.filter((x) => x.status === "FINISHED").sort(byDate).slice(-5).reverse().map(slim),
     next: all.filter((x) => ["SCHEDULED", "TIMED"].includes(x.status)).sort(byDate).slice(0, 3).map(slim),
   });
+});
+
+/* ---------- Modelo ELO y seguimiento de predicciones ---------- */
+const MODEL_CODES = new Set(["PD", "PL", "SA", "BL1", "FL1", "DED", "PPL", "ELC"]);
+const STORE = "data/predictions.json"; // predicciones congeladas antes de cada partido
+let store = {};
+try { store = JSON.parse(fs.readFileSync(STORE, "utf8")); } catch {}
+const saveStore = () => {
+  fs.mkdirSync("data", { recursive: true });
+  fs.writeFileSync(STORE, JSON.stringify(store));
+};
+
+const norm = (x) => ({
+  id: x.id, date: x.utcDate, status: x.status,
+  homeId: x.homeTeam?.id, awayId: x.awayTeam?.id,
+  home: x.homeTeam?.shortName || x.homeTeam?.name, away: x.awayTeam?.shortName || x.awayTeam?.name,
+  hg: x.score?.fullTime?.home, ag: x.score?.fullTime?.away,
+});
+const valid = (m) => m.homeId && m.awayId;
+const done = (m) => m.status === "FINISHED" && m.hg != null && m.ag != null;
+const byD = (a, b) => new Date(a.date) - new Date(b.date);
+const outcome = (hg, ag) => (hg > ag ? "H" : hg < ag ? "A" : "D");
+const modelCache = new Map();
+const prevMiss = new Map(); // ligas cuya temporada anterior no está disponible en tu plan
+
+app.get("/api/model/:code", async (req, res) => {
+  const code = req.params.code.toUpperCase();
+  if (!MODEL_CODES.has(code)) return res.status(400).json({ error: "Modelo no disponible para esta competición" });
+  const hit = modelCache.get(code);
+  if (hit && Date.now() - hit.time < 10 * 60 * 1000) return res.json(hit.data);
+
+  try {
+    const raw = await fdFetch(`/competitions/${code}/matches`, 10 * 60 * 1000);
+    const cur = (raw.matches || []).map(norm).filter(valid);
+    if (!cur.length) throw new Error("Sin partidos para esta competición");
+
+    // Temporada anterior para "calentar" los ratings (si tu plan la permite)
+    let prev = [], warmNote = null, transient = false;
+    const year = Number((raw.matches[0].season?.startDate || "").slice(0, 4));
+    if (year && !(prevMiss.get(code) > Date.now() - 3600e3)) {
+      try {
+        const p = await fdFetch(`/competitions/${code}/matches?season=${year - 1}`, 24 * 3600e3);
+        prev = (p.matches || []).map(norm).filter(valid).filter(done);
+      } catch (e) {
+        if (/40[34]/.test(e.message)) prevMiss.set(code, Date.now()); else transient = true;
+        warmNote = "No se pudo cargar la temporada anterior (" + e.message + ")";
+      }
+    } else if (year) warmNote = "La temporada anterior no está disponible en tu plan";
+
+    const { R, names, rows, history, currentTeams } = build(
+      prev.length ? [prev, cur.filter(done)] : [cur.filter(done)], PARAMS, cur
+    );
+    const teams = currentTeams.map((id) => {
+      const h = history.get(id);
+      return { id, name: names.get(id), rating: Math.round(R.get(id)), played: h.length - 1, delta: Math.round(h[h.length - 1] - h[0]) };
+    }).sort((a, b) => b.rating - a.rating);
+    const hist = Object.fromEntries(currentTeams.map((id) => [id, history.get(id).map(Math.round)]));
+
+    // Próxima jornada: se predice y se CONGELA la predicción (solo si el partido aún no ha empezado)
+    const now = Date.now();
+    const upcoming = cur
+      .filter((m) => ["SCHEDULED", "TIMED"].includes(m.status) && new Date(m.date) > now)
+      .sort(byD).slice(0, Math.floor(currentTeams.length / 2))
+      .map((m) => ({
+        id: m.id, date: m.date, home: m.home, away: m.away, homeId: m.homeId, awayId: m.awayId,
+        pr: probs(R.get(m.homeId) ?? PARAMS.START, R.get(m.awayId) ?? PARAMS.START),
+      }));
+    for (const u of upcoming) if (!store[u.id]) store[u.id] = { ...u, code, frozenAt: new Date().toISOString() };
+
+    // Comprobación: las predicciones congeladas cuyo partido ya terminó reciben su resultado real
+    const byId = new Map(cur.map((m) => [m.id, m]));
+    for (const s of Object.values(store)) {
+      const m = byId.get(s.id);
+      if (s.code === code && !s.result && m && done(m)) s.result = { hg: m.hg, ag: m.ag, outcome: outcome(m.hg, m.ag) };
+    }
+    saveStore();
+
+    const all = Object.values(store);
+    const mine = all.filter((s) => s.code === code);
+    const asRows = (list) => list.filter((s) => s.result).map((s) => ({ pr: s.pr, outcome: s.result.outcome }));
+    const data = {
+      code, warm: prev.length > 0, warmNote, params: PARAMS, teams, history: hist,
+      metrics: { all: metrics(rows), current: metrics(rows.filter((r) => r.current)) },
+      upcoming,
+      tracking: {
+        league: metrics(asRows(mine)), all: metrics(asRows(all)),
+        pending: mine.filter((s) => !s.result).length,
+        recent: mine.filter((s) => s.result).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8),
+      },
+    };
+    if (!transient) modelCache.set(code, { time: Date.now(), data });
+    res.json(data);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
 });
 
 app.get("/api/health", (_req, res) =>
